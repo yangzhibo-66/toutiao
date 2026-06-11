@@ -1,0 +1,14 @@
+<view class="bottom-nav">
+  <view class="nav-item {{active === 'home' ? 'is-active' : ''}}" data-page="home" bindtap="handleTap">
+    <text class="nav-icon">新</text>
+    <text class="nav-text">首页</text>
+  </view>
+  <view class="nav-item {{active === 'ai' ? 'is-active' : ''}}" data-page="ai" bindtap="handleTap">
+    <text class="nav-icon">AI</text>
+    <text class="nav-text">问答</text>
+  </view>
+  <view class="nav-item {{active === 'my' ? 'is-active' : ''}}" data-page="my" bindtap="handleTap">
+    <text class="nav-icon">我</text>
+    <text class="nav-text">我的</text>
+  </view>
+</view>

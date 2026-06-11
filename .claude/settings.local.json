@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Bash(curl -s http://localhost:5173)",
+      "Bash(python *)",
+      "Bash(npm *)",
+      "Bash(/c/Program Files \\(x86\\)/Microsoft/Edge/Application/msedge.exe *)",
+      "Bash(\"/c/Program Files \\(x86\\)/Microsoft/Edge/Application/msedge.exe\" --headless --disable-gpu --window-size=390,844 --virtual-time-budget=3000 --dump-dom \"http://127.0.0.1:5175/home?categoryId=3\")",
+      "Bash(PYTHONPATH=\"C:/Users/yzbdyxb/Desktop/今日头条1/fastApiProject\" python *)",
+      "Bash(curl *)",
+      "Bash(command -v chromium-cli)",
+      "Bash(command -v npx)",
+      "Bash(command -v node)"
+    ]
+  }
+}

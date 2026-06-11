@@ -1,0 +1,19 @@
+name: toutiao
+
+services:
+  backend:
+    build:
+      context: ./fastApiProject
+      dockerfile: Dockerfile
+      args:
+        PIP_INDEX_URL: https://pypi.tuna.tsinghua.edu.cn/simple
+        PIP_TRUSTED_HOST: pypi.tuna.tsinghua.edu.cn
+    container_name: toutiao-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./fastApiProject/.env
+    volumes:
+      - ./fastApiProject/news_app.db:/app/news_app.db
+      - ./fastApiProject/uploads:/app/uploads
+    restart: unless-stopped

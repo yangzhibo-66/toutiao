@@ -1,0 +1,30 @@
+.category-panel {
+  padding: 18rpx;
+}
+
+.category-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 108rpx;
+  padding: 0 26rpx;
+  background: linear-gradient(180deg, #fbfdff, #f2f7ff);
+  border: 1rpx solid rgba(213, 223, 238, 0.88);
+  border-radius: 24rpx;
+}
+
+.category-item + .category-item {
+  margin-top: 16rpx;
+}
+
+.category-name {
+  color: #1e2938;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.category-arrow {
+  color: #1e75ff;
+  font-size: 24rpx;
+  font-weight: 700;
+}

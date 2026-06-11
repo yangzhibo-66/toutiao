@@ -1,0 +1,19 @@
+<view class="news-card {{mode === 'simple' ? 'simple' : ''}}" bindtap="handleTap">
+  <view class="card-copy">
+    <text class="card-source">{{item.author || '今日要闻'}}</text>
+    <text class="card-title">{{item.title}}</text>
+    <text class="card-desc" wx:if="{{item.description}}">{{item.description}}</text>
+    <view class="card-meta">
+      <text>{{item.publishTime || '刚刚更新'}}</text>
+      <text class="meta-dot"></text>
+      <text>{{item.views || 0}} 阅读</text>
+    </view>
+  </view>
+
+  <block wx:if="{{item.image}}">
+    <image class="card-image" src="{{item.image}}" mode="aspectFill"></image>
+  </block>
+  <view wx:else class="card-image placeholder">
+    <text>{{item.title ? item.title.slice(0, 10) : 'NEWS'}}</text>
+  </view>
+</view>

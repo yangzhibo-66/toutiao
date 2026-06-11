@@ -1,0 +1,114 @@
+.profile-card {
+  margin-bottom: 24rpx;
+}
+
+.profile-row {
+  display: flex;
+  align-items: center;
+}
+
+.avatar-image,
+.avatar-fallback {
+  flex-shrink: 0;
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 50%;
+}
+
+.avatar-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 44rpx;
+  font-weight: 800;
+  background: linear-gradient(135deg, #1e75ff, #4aa8ff);
+}
+
+.profile-copy {
+  flex: 1;
+  min-width: 0;
+  margin-left: 24rpx;
+}
+
+.profile-tag,
+.profile-name,
+.profile-desc {
+  display: block;
+}
+
+.profile-tag {
+  margin-bottom: 8rpx;
+  color: #1e75ff;
+  font-size: 22rpx;
+  font-weight: 800;
+  letter-spacing: 5rpx;
+}
+
+.profile-name {
+  color: #1d2939;
+  font-size: 38rpx;
+  font-weight: 800;
+}
+
+.profile-desc {
+  margin-top: 8rpx;
+  color: #6d7c91;
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+
+.guest-actions {
+  display: flex;
+  gap: 14rpx;
+  margin-top: 24rpx;
+}
+
+.guest-button {
+  flex: 1;
+}
+
+.menu-card {
+  padding: 12rpx;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  min-height: 104rpx;
+  padding: 0 22rpx;
+  border-radius: 24rpx;
+}
+
+.menu-item + .menu-item {
+  margin-top: 10rpx;
+}
+
+.menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56rpx;
+  height: 56rpx;
+  margin-right: 18rpx;
+  color: #1e75ff;
+  font-size: 24rpx;
+  font-weight: 800;
+  background: rgba(30, 117, 255, 0.1);
+  border-radius: 18rpx;
+}
+
+.menu-text {
+  color: #1f2937;
+  font-size: 30rpx;
+  font-weight: 700;
+}
+
+.danger {
+  color: #ef5350;
+  background: rgba(239, 83, 80, 0.1);
+}
+
+.danger-text {
+  color: #ef5350;
+}

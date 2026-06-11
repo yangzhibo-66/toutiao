@@ -1,0 +1,22 @@
+.ai-hero {
+  background: linear-gradient(135deg, #ffffff, #eef6ff);
+}
+
+.ai-card {
+  padding: 28rpx;
+}
+
+.tip-line {
+  display: block;
+  color: #526377;
+  font-size: 28rpx;
+  line-height: 1.8;
+}
+
+.tip-line + .tip-line {
+  margin-top: 10rpx;
+}
+
+.copy-button {
+  margin-top: 28rpx;
+}

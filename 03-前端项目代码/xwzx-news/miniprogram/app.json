@@ -1,0 +1,22 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/detail/detail",
+    "pages/category/category",
+    "pages/ai-chat/ai-chat",
+    "pages/my/my",
+    "pages/login/login",
+    "pages/register/register",
+    "pages/favorite/favorite",
+    "pages/history/history"
+  ],
+  "window": {
+    "navigationBarTitleText": "新闻资讯",
+    "navigationBarBackgroundColor": "#f7f9fc",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#f7f9fc",
+    "backgroundTextStyle": "light"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

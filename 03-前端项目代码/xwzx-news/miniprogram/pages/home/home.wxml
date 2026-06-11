@@ -1,0 +1,41 @@
+<view class="page-shell">
+  <view class="hero-card">
+    <text class="hero-tag">TODAY</text>
+    <text class="hero-title">{{currentCategoryName}}</text>
+    <text class="hero-desc">精选要闻，快速浏览，适配微信小程序原生体验。</text>
+  </view>
+
+  <view class="tabs-bar panel-card">
+    <scroll-view class="tabs-scroll" scroll-x="true" enable-flex="true" show-scrollbar="false">
+      <view
+        wx:for="{{categories}}"
+        wx:key="id"
+        class="tab-item {{item.id === currentCategoryId ? 'is-active' : ''}}"
+        data-id="{{item.id}}"
+        bindtap="switchCategory"
+      >
+        {{item.name}}
+      </view>
+    </scroll-view>
+    <view class="more-action" bindtap="goToCategoryPage">更多</view>
+  </view>
+
+  <view class="news-list" wx:if="{{newsList.length}}">
+    <news-card
+      wx:for="{{newsList}}"
+      wx:key="id"
+      item="{{item}}"
+      bindtapcard="goToDetail"
+    ></news-card>
+  </view>
+
+  <view class="panel-card empty-card" wx:elif="{{initialized && !loading}}">
+    <text class="empty-title">暂时没有新闻</text>
+    <text class="empty-desc">下拉刷新试试，或者切换到其他分类。</text>
+  </view>
+
+  <view class="load-tip" wx:if="{{loading}}">加载中...</view>
+  <view class="load-tip" wx:elif="{{finished && newsList.length}}">已经到底了</view>
+
+  <bottom-nav active="home"></bottom-nav>
+</view>

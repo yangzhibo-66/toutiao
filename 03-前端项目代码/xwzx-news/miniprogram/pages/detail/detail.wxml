@@ -1,0 +1,59 @@
+<view class="page-shell detail-shell">
+  <view wx:if="{{detail}}" class="detail-wrap">
+    <view class="panel-card detail-head">
+      <view class="title-row">
+        <text class="detail-title">{{detail.title}}</text>
+        <view class="favorite-chip {{isFavorite ? 'is-active' : ''}}" bindtap="toggleFavorite">
+          <text wx:if="{{isFavorite}}">已收藏</text>
+          <text wx:else>收藏</text>
+        </view>
+      </view>
+
+      <view class="detail-meta">
+        <text>{{detail.author || '新闻聚合'}}</text>
+        <text>{{detail.publishTime}}</text>
+        <text>{{detail.views || 0}} 阅读</text>
+      </view>
+    </view>
+
+    <view class="detail-cover panel-card">
+      <image wx:if="{{detail.image}}" src="{{detail.image}}" mode="aspectFill" class="cover-image"></image>
+      <view wx:else class="cover-placeholder">{{detail.title ? detail.title.slice(0, 16) : 'NEWS'}}</view>
+    </view>
+
+    <view wx:if="{{hasReadableContent}}" class="panel-card article-card">
+      <text
+        wx:for="{{paragraphs}}"
+        wx:key="index"
+        class="article-paragraph {{index === 0 ? 'lead' : ''}}"
+      >
+        {{item}}
+      </text>
+    </view>
+
+    <view wx:else class="panel-card empty-card">
+      <text class="empty-title">正文暂未整理</text>
+      <text class="empty-desc">这个版本不直接打开外部网页，若需要原文可复制来源链接。</text>
+    </view>
+
+    <view wx:if="{{detail.sourceUrl}}" class="source-action primary-button" bindtap="copySourceLink">
+      复制原文链接
+    </view>
+
+    <view wx:if="{{detail.relatedNews && detail.relatedNews.length}}" class="related-block">
+      <text class="section-title">相关新闻</text>
+      <news-card
+        wx:for="{{detail.relatedNews}}"
+        wx:key="id"
+        item="{{item}}"
+        mode="simple"
+        bindtapcard="goToRelated"
+      ></news-card>
+    </view>
+  </view>
+
+  <view wx:elif="{{!loading}}" class="panel-card empty-card">
+    <text class="empty-title">没有找到这条新闻</text>
+    <text class="empty-desc">请返回列表重新选择。</text>
+  </view>
+</view>

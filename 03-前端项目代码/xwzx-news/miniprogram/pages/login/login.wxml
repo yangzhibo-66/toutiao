@@ -1,0 +1,24 @@
+<view class="page-shell">
+  <view class="hero-card login-hero">
+    <text class="hero-tag">NEWS HUB</text>
+    <text class="hero-title">欢迎回来</text>
+    <text class="hero-desc">登录后即可同步你的收藏、浏览记录和个性化内容。</text>
+  </view>
+
+  <view class="panel-card form-card">
+    <view class="form-item">
+      <text class="form-label">用户名</text>
+      <input class="form-input" placeholder="请输入用户名" value="{{username}}" bindinput="onUsernameInput" />
+    </view>
+    <view class="form-item">
+      <text class="form-label">密码</text>
+      <input class="form-input" password="true" placeholder="请输入密码" value="{{password}}" bindinput="onPasswordInput" />
+    </view>
+    <view class="primary-button submit-button" bindtap="submit">登录</view>
+    <view class="form-hint">
+      <text>测试账号: admin</text>
+      <text>\n测试密码: 123456</text>
+    </view>
+    <view class="switch-link" bindtap="goRegister">没有账号？去注册</view>
+  </view>
+</view>

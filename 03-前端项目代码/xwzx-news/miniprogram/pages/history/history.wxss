@@ -1,0 +1,25 @@
+.header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16rpx;
+}
+
+.tiny-button {
+  height: 64rpx;
+  padding: 0 22rpx;
+  font-size: 24rpx;
+}
+
+.history-item {
+  position: relative;
+}
+
+.delete-action {
+  position: absolute;
+  right: 22rpx;
+  bottom: 22rpx;
+  color: #ef5350;
+  font-size: 24rpx;
+  font-weight: 700;
+}

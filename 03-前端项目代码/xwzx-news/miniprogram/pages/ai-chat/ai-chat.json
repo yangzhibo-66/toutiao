@@ -1,0 +1,6 @@
+{
+  "navigationBarTitleText": "AI问答",
+  "usingComponents": {
+    "bottom-nav": "/components/bottom-nav/index"
+  }
+}

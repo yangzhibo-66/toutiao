@@ -1,0 +1,20 @@
+<view class="page-shell">
+  <view class="hero-card">
+    <text class="hero-tag">DISCOVER</text>
+    <text class="hero-title">浏览全部分类</text>
+    <text class="hero-desc">从热点到科技，快速进入你想看的内容频道。</text>
+  </view>
+
+  <view class="panel-card category-panel">
+    <view
+      wx:for="{{categories}}"
+      wx:key="id"
+      class="category-item"
+      data-id="{{item.id}}"
+      bindtap="chooseCategory"
+    >
+      <text class="category-name">{{item.name}}</text>
+      <text class="category-arrow">进入</text>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,18 @@
+<view class="page-shell">
+  <view class="header-row" wx:if="{{list.length}}">
+    <text class="section-title">浏览记录</text>
+    <view class="ghost-button tiny-button" bindtap="clearAll">清空</view>
+  </view>
+
+  <view wx:if="{{list.length}}">
+    <view wx:for="{{list}}" wx:key="id" class="history-item">
+      <news-card item="{{item}}" mode="simple" bindtapcard="goToDetail"></news-card>
+      <view class="delete-action" data-id="{{item.id}}" bindtap="removeItem">删除</view>
+    </view>
+  </view>
+
+  <view wx:else class="panel-card empty-card">
+    <text class="empty-title">还没有浏览记录</text>
+    <text class="empty-desc">打开过的新闻会自动出现在这里。</text>
+  </view>
+</view>

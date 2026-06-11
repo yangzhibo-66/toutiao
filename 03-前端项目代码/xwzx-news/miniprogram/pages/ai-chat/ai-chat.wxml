@@ -1,0 +1,17 @@
+<view class="page-shell">
+  <view class="hero-card ai-hero">
+    <text class="hero-tag">AI NEWS ASSISTANT</text>
+    <text class="hero-title">小程序版暂不直连大模型</text>
+    <text class="hero-desc">原项目把 API Key 放在前端，这在微信小程序里不安全。建议改成你自己的后端代理接口，再把聊天页接回去。</text>
+  </view>
+
+  <view class="panel-card ai-card">
+    <text class="section-title">为什么先这样处理</text>
+    <text class="tip-line">1. 小程序包里的密钥很容易被拿到，不适合直接暴露。</text>
+    <text class="tip-line">2. 流式 SSE 在小程序里也需要重新适配，不能照搬浏览器写法。</text>
+    <text class="tip-line">3. 先保证新闻主流程能在微信开发者工具里正常运行，再接 AI 更稳。</text>
+    <view class="primary-button copy-button" bindtap="copyTip">复制改造建议</view>
+  </view>
+
+  <bottom-nav active="ai"></bottom-nav>
+</view>
