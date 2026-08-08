@@ -22,9 +22,3 @@ const resolveApiBaseURL = () => {
 export const apiConfig = {
   baseURL: resolveApiBaseURL(),
 }
-
-export const aiChatConfig = {
-  apiEndpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-  apiKey: 'sk-a83568578df343fb8092cfdcbbaa2491',
-  model: 'qwen-max',
-}

@@ -57,7 +57,7 @@ import TabBar from '../components/TabBar.vue';
 import { showToast } from 'vant';
 import * as marked from 'marked';
 import DOMPurify from 'dompurify';
-import { aiChatConfig } from '../config/api';
+import { apiConfig } from '../config/api';
 
 // 聊天消息
 const messages = ref([
@@ -66,11 +66,6 @@ const messages = ref([
 const userInput = ref('');
 const messagesContainer = ref(null);
 const isLoading = ref(false);
-
-// 从配置文件获取API设置
-const apiEndpoint = ref(aiChatConfig.apiEndpoint);
-const apiKey = ref(aiChatConfig.apiKey);
-const model = ref(aiChatConfig.model);
 
 // 格式化消息内容（支持Markdown）
 const formatMessage = (content) => {
@@ -82,12 +77,6 @@ const formatMessage = (content) => {
 // 发送消息
 const sendMessage = async () => {
   if (!userInput.value.trim() || isLoading.value) return;
-  
-  // 检查API设置
-  if (!apiKey.value || apiKey.value === 'your-api-key-here') {
-    showToast('API Key未配置，请联系管理员');
-    return;
-  }
   
   // 添加用户消息
   const userMessage = userInput.value.trim();
@@ -123,15 +112,12 @@ const fetchAIResponse = async (userMessage) => {
     .map(msg => ({ role: msg.role, content: msg.content }));
   
   try {
-    const response = await fetch(apiEndpoint.value, {
+    const response = await fetch(`${apiConfig.baseURL}/api/ai/chat`, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey.value}`,
-        'X-DashScope-SSE': 'enable' // 添加阿里云DashScope所需的SSE头
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        model: model.value,
         messages: allMessages,
         stream: true
       })
@@ -163,6 +149,9 @@ const fetchAIResponse = async (userMessage) => {
         
         try {
           const json = JSON.parse(data);
+          if (json.error?.message) {
+            throw new Error(json.error.message);
+          }
           // 适配阿里云DashScope的返回格式
           const content = json.choices?.[0]?.delta?.content || 
                          json.output?.text || 
@@ -175,6 +164,7 @@ const fetchAIResponse = async (userMessage) => {
             scrollToBottom();
           }
         } catch (e) {
+          if (e.message) throw e;
           console.error('Error parsing SSE data:', e);
         }
       }

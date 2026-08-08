@@ -17,6 +17,18 @@
         <van-cell :title="$t('settings.notificationSettings')" is-link />
         <van-cell :title="$t('settings.aboutUs')" is-link />
       </van-cell-group>
+
+      <van-cell-group inset title="新闻同步">
+        <van-cell title="同步状态" :value="syncStatusText" />
+        <van-cell title="最近结果" :label="syncResultText" />
+        <van-cell title="最后同步" :value="lastSyncTimeText" />
+        <van-cell
+          title="刷新状态"
+          is-link
+          :value="syncLoading ? '刷新中...' : ''"
+          @click="loadSyncStatus"
+        />
+      </van-cell-group>
     </div>
     
     <!-- 主题选择弹出层 -->
@@ -73,12 +85,14 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { showToast } from 'vant';
+import axios from 'axios';
 import { useThemeStore } from '../store/theme';
 import { useI18n } from 'vue-i18n';
 import { useLanguageStore } from '../store/language';
+import { apiConfig } from '../config/api';
 
 const router = useRouter();
 const themeStore = useThemeStore();
@@ -110,6 +124,48 @@ const languageOptions = [
   { label: 'English', value: 'en-US' }
 ];
 
+const syncLoading = ref(false);
+const syncStatus = ref(null);
+
+const formatDateTime = (value) => {
+  if (!value) return '暂无';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+};
+
+const syncStatusText = computed(() => {
+  if (!syncStatus.value) return '未获取';
+  return syncStatus.value.running ? '同步中' : '空闲';
+});
+
+const lastSyncTimeText = computed(() => {
+  return formatDateTime(syncStatus.value?.last_finished_at);
+});
+
+const syncResultText = computed(() => {
+  const result = syncStatus.value?.last_result;
+  const error = syncStatus.value?.last_error;
+  if (error) return `失败：${error}`;
+  if (!result) return '暂无同步记录';
+  return `来源 ${result.provider}，抓取 ${result.fetched} 条，新增 ${result.inserted} 条，更新 ${result.updated} 条`;
+});
+
+const loadSyncStatus = async () => {
+  if (syncLoading.value) return;
+  syncLoading.value = true;
+  try {
+    const response = await axios.get(`${apiConfig.baseURL}/api/news/sync/status`);
+    if (response.data?.code === 200) {
+      syncStatus.value = response.data.data;
+    }
+  } catch (error) {
+    showToast('同步状态获取失败');
+  } finally {
+    syncLoading.value = false;
+  }
+};
+
 // 切换语言
 const changeLanguage = () => {
   languageStore.setLanguage(currentLanguage.value);
@@ -119,6 +175,8 @@ const changeLanguage = () => {
   // 强制刷新页面以应用语言更改
   window.location.reload();
 };
+
+onMounted(loadSyncStatus);
 </script>
 
 <style scoped>
@@ -132,6 +190,10 @@ const changeLanguage = () => {
 
 .settings-list {
   margin-top: 20px;
+}
+
+.settings-list :deep(.van-cell-group) {
+  margin-bottom: 12px;
 }
 
 .popup-title {

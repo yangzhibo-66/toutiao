@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 
 load_dotenv()
 
-from routers import favorite, history, news, users
+from routers import ai, favorite, history, news, users
 from services.news_sync import ensure_sync_schema, sync_loop
 from utils.db_init import init_database
 from utils.exception_handlers import register_exception_handlers
@@ -58,3 +58,4 @@ app.include_router(news.router)
 app.include_router(users.router)
 app.include_router(favorite.router)
 app.include_router(history.router)
+app.include_router(ai.router)

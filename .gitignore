@@ -1,0 +1,25 @@
+# Local dependencies
+.venv/
+fastApiProject/.venv/
+node_modules/
+
+# Python cache
+__pycache__/
+*.py[cod]
+
+# Vite/cache output
+.vite/
+.vite-temp/
+
+# Local editor files
+.idea/workspace.xml
+.idea/dataSources/
+.idea/dataSources.local.xml
+fastApiProject/.idea/workspace.xml
+fastApiProject/.idea/dataSources/
+fastApiProject/.idea/dataSources.local.xml
+fastApiProject/.idea/httpRequests/
+
+# Environment files
+.env.local
+*.local

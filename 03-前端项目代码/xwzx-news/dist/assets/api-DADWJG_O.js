@@ -1,1 +1,0 @@
-const t=()=>{if(typeof window<"u"){const{protocol:o,hostname:a}=window.location;return`${o}//${a}:8000`}return"http://127.0.0.1:8000"},n={baseURL:t()},e={apiEndpoint:"https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",apiKey:"sk-a83568578df343fb8092cfdcbbaa2491",model:"qwen-max"};export{n as a,e as b};

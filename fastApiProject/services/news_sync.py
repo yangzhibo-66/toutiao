@@ -293,6 +293,22 @@ async def _fetch_worldnews_feed(client: httpx.AsyncClient, feed: FeedDefinition)
     return items
 
 
+async def _fetch_rss_fallback(
+    client: httpx.AsyncClient,
+    feed: FeedDefinition,
+    warnings: list[str],
+    reason: str,
+) -> list[dict[str, Any]]:
+    logger.warning("Fallback to RSS for %s: %s", feed.category_name, reason)
+    try:
+        return await _fetch_feed(client, feed)
+    except Exception as exc:
+        message = f"{feed.category_name}: RSS fallback failed after {reason}: {exc}"
+        warnings.append(message)
+        logger.exception(message)
+        return []
+
+
 async def _load_category_map(db: AsyncSession) -> dict[str, int]:
     result = await db.execute(select(Category))
     categories = result.scalars().all()
@@ -347,6 +363,7 @@ def _should_replace_content(existing: News, incoming_content: str) -> bool:
 async def sync_news(db: AsyncSession) -> dict[str, Any]:
     category_map = await _load_category_map(db)
     fetched_items: list[dict[str, Any]] = []
+    warnings: list[str] = []
     used_worldnews = False
     used_rss = False
     async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT_SECONDS, follow_redirects=True) as client:
@@ -360,19 +377,30 @@ async def sync_news(db: AsyncSession) -> dict[str, Any]:
                         worldnews_items = await _fetch_worldnews_feed(client, feed)
                         if worldnews_items:
                             used_worldnews = True
-                        fetched_items.extend(worldnews_items)
-                    except httpx.HTTPStatusError as exc:
-                        if exc.response is not None and exc.response.status_code == 402:
-                            logger.warning(
-                                "World News API quota/payment unavailable for %s, fallback to RSS",
-                                feed.category_name,
+                            fetched_items.extend(worldnews_items)
+                        else:
+                            rss_items = await _fetch_rss_fallback(
+                                client,
+                                feed,
+                                warnings,
+                                "World News API returned no items",
                             )
-                            rss_items = await _fetch_feed(client, feed)
                             if rss_items:
                                 used_rss = True
                             fetched_items.extend(rss_items)
-                        else:
-                            raise
+                    except Exception as exc:
+                        status = ""
+                        if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
+                            status = f" HTTP {exc.response.status_code}"
+                        rss_items = await _fetch_rss_fallback(
+                            client,
+                            feed,
+                            warnings,
+                            f"World News API failed{status}: {exc}",
+                        )
+                        if rss_items:
+                            used_rss = True
+                        fetched_items.extend(rss_items)
                 else:
                     rss_items = await _fetch_feed(client, feed)
                     if rss_items:
@@ -466,6 +494,7 @@ async def sync_news(db: AsyncSession) -> dict[str, Any]:
         "updated": updated,
         "skipped": skipped,
         "categories": len(grouped_items),
+        "warnings": warnings,
     }
 
 
