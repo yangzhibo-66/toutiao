@@ -1,6 +1,7 @@
-from sqlalchemy import select
+from sqlalchemy import inspect, select, text
 
 from config.db_conf import AsyncSessionLocal, async_engine
+from models.ai_chat import AiChat
 from models.favorite import Favorite
 from models.history import History
 from models.news import Category, News
@@ -13,6 +14,7 @@ ALL_MODELS = [
     UserToken,
     Favorite,
     History,
+    AiChat,
 ]
 
 DEFAULT_CATEGORIES = [
@@ -46,9 +48,19 @@ async def seed_default_categories() -> None:
         await session.commit()
 
 
+async def ensure_news_owner_schema() -> None:
+    async with async_engine.begin() as conn:
+        columns = await conn.run_sync(
+            lambda sync_conn: {column["name"] for column in inspect(sync_conn).get_columns("news")}
+        )
+        if "user_id" not in columns:
+            await conn.execute(text("ALTER TABLE news ADD COLUMN user_id INTEGER"))
+
+
 async def init_database() -> None:
     async with async_engine.begin() as conn:
         for model in ALL_MODELS:
             await conn.run_sync(model.metadata.create_all)
 
+    await ensure_news_owner_schema()
     await seed_default_categories()

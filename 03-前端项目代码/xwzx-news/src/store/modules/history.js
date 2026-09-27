@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia';
-import axios from 'axios';
+import request from '../../services/request';
 import { useUserStore } from '../user';
-import { apiConfig } from '../../config/api';
 
 export const useHistoryStore = defineStore('history', {
   state: () => ({
@@ -23,15 +22,8 @@ export const useHistoryStore = defineStore('history', {
       }
       
       try {
-        const response = await axios.post(`${apiConfig.baseURL}/api/history/add`, 
-          { newsId },
-          { 
-            headers: { 
-              Authorization: userStore.token 
-            } 
-          }
-        );
-        
+        const response = await request.post('/api/history/add', { newsId });
+
         if (response.data.code === 200) {
           return { success: true, data: response.data.data };
         } else {
@@ -87,11 +79,7 @@ export const useHistoryStore = defineStore('history', {
       
       try {
         console.log('清空浏览历史API：开始请求');
-        const response = await axios.delete(`${apiConfig.baseURL}/api/history/clear`, { 
-          headers: { 
-            Authorization: userStore.token 
-          } 
-        });
+        const response = await request.delete('/api/history/clear');
         
         if (response.data.code === 200) {
           console.log('清空浏览历史API：清空成功');
@@ -127,11 +115,7 @@ export const useHistoryStore = defineStore('history', {
       
       try {
         console.log('删除浏览历史API：开始请求', id);
-        const response = await axios.delete(`${apiConfig.baseURL}/api/history/delete/${id}`, { 
-          headers: { 
-            Authorization: userStore.token 
-          } 
-        });
+        const response = await request.delete(`/api/history/delete/${id}`);
         
         if (response.data.code === 200) {
           console.log('删除浏览历史API：删除成功');
@@ -173,11 +157,7 @@ export const useHistoryStore = defineStore('history', {
       
       try {
         console.log('获取浏览历史API：开始请求');
-        const response = await axios.get(`${apiConfig.baseURL}/api/history/list`, { 
-          headers: { 
-            Authorization: userStore.token 
-          } 
-        });
+        const response = await request.get('/api/history/list');
         
         if (response.data.code === 200) {
           // 正确获取list数组

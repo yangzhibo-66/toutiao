@@ -65,11 +65,12 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { useUserStore } from '../store/user'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const username = ref('')
@@ -94,7 +95,8 @@ const onSubmit = async () => {
         type: 'success',
         message: result.message
       })
-      router.push('/')
+      // 被守卫拦截而来时回跳原页面，否则回首页
+      router.push(typeof route.query.redirect === 'string' ? route.query.redirect : '/')
       return
     }
 

@@ -1,1 +1,0 @@
-const r=()=>{if(typeof window<"u"){const{protocol:o,hostname:t}=window.location;return`${o}//${t}:8000`}return"http://127.0.0.1:8000"},a={baseURL:r()},c=(o,t)=>{const n=o.__vccOpts||o;for(const[e,s]of t)n[e]=s;return n};export{c as _,a};

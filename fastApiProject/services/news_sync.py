@@ -14,6 +14,7 @@ import httpx
 from sqlalchemy import inspect, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from cache.news_cache import invalidate_news_cache
 from config.db_conf import AsyncSessionLocal, async_engine
 from crud.news import normalize_news_title
 from models.news import Category, News
@@ -29,6 +30,8 @@ SYNC_INTERVAL_MINUTES = int(os.getenv("NEWS_SYNC_INTERVAL_MINUTES", "1440"))
 RUN_ON_STARTUP = os.getenv("NEWS_SYNC_RUN_ON_STARTUP", "true").lower() in {"1", "true", "yes", "on"}
 MAX_ITEMS_PER_FEED = int(os.getenv("NEWS_SYNC_MAX_ITEMS", "15"))
 REQUEST_TIMEOUT_SECONDS = float(os.getenv("NEWS_SYNC_HTTP_TIMEOUT", "20"))
+# 并发抓取的 feed 数上限：9 个分类并发抓取比顺序抓取快数倍
+FETCH_CONCURRENCY = int(os.getenv("NEWS_SYNC_FETCH_CONCURRENCY", "3"))
 NEWS_PROVIDER = os.getenv("NEWS_PROVIDER", "").strip().lower()
 WORLD_NEWS_API_KEY = os.getenv("WORLD_NEWS_API_KEY", "").strip()
 
@@ -360,6 +363,53 @@ def _should_replace_content(existing: News, incoming_content: str) -> bool:
     return False
 
 
+async def _fetch_feed_with_fallback(
+    client: httpx.AsyncClient, feed: FeedDefinition
+) -> tuple[list[dict[str, Any]], bool, bool, list[str]]:
+    """抓取单个分类（WorldNewsAPI 优先、RSS 兜底），返回 (items, used_worldnews, used_rss, warnings)。"""
+    items: list[dict[str, Any]] = []
+    feed_warnings: list[str] = []
+    used_worldnews = False
+    used_rss = False
+
+    if _use_world_news_api():
+        try:
+            worldnews_items = await _fetch_worldnews_feed(client, feed)
+            if worldnews_items:
+                used_worldnews = True
+                items.extend(worldnews_items)
+            else:
+                rss_items = await _fetch_rss_fallback(
+                    client,
+                    feed,
+                    feed_warnings,
+                    "World News API returned no items",
+                )
+                if rss_items:
+                    used_rss = True
+                items.extend(rss_items)
+        except Exception as exc:
+            status = ""
+            if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
+                status = f" HTTP {exc.response.status_code}"
+            rss_items = await _fetch_rss_fallback(
+                client,
+                feed,
+                feed_warnings,
+                f"World News API failed{status}: {exc}",
+            )
+            if rss_items:
+                used_rss = True
+            items.extend(rss_items)
+    else:
+        rss_items = await _fetch_feed(client, feed)
+        if rss_items:
+            used_rss = True
+        items.extend(rss_items)
+
+    return items, used_worldnews, used_rss, feed_warnings
+
+
 async def sync_news(db: AsyncSession) -> dict[str, Any]:
     category_map = await _load_category_map(db)
     fetched_items: list[dict[str, Any]] = []
@@ -370,44 +420,22 @@ async def sync_news(db: AsyncSession) -> dict[str, Any]:
         for feed in FEEDS:
             if feed.category_name not in category_map:
                 logger.warning("Skip feed for missing category: %s", feed.category_name)
-                continue
-            try:
-                if _use_world_news_api():
-                    try:
-                        worldnews_items = await _fetch_worldnews_feed(client, feed)
-                        if worldnews_items:
-                            used_worldnews = True
-                            fetched_items.extend(worldnews_items)
-                        else:
-                            rss_items = await _fetch_rss_fallback(
-                                client,
-                                feed,
-                                warnings,
-                                "World News API returned no items",
-                            )
-                            if rss_items:
-                                used_rss = True
-                            fetched_items.extend(rss_items)
-                    except Exception as exc:
-                        status = ""
-                        if isinstance(exc, httpx.HTTPStatusError) and exc.response is not None:
-                            status = f" HTTP {exc.response.status_code}"
-                        rss_items = await _fetch_rss_fallback(
-                            client,
-                            feed,
-                            warnings,
-                            f"World News API failed{status}: {exc}",
-                        )
-                        if rss_items:
-                            used_rss = True
-                        fetched_items.extend(rss_items)
-                else:
-                    rss_items = await _fetch_feed(client, feed)
-                    if rss_items:
-                        used_rss = True
-                    fetched_items.extend(rss_items)
-            except Exception as exc:
-                logger.exception("Failed to fetch feed for %s: %s", feed.category_name, exc)
+
+        feeds = [feed for feed in FEEDS if feed.category_name in category_map]
+        semaphore = asyncio.Semaphore(FETCH_CONCURRENCY)
+
+        async def fetch_bounded(feed: FeedDefinition):
+            async with semaphore:
+                return await _fetch_feed_with_fallback(client, feed)
+
+        for items, feed_used_worldnews, feed_used_rss, feed_warnings in await asyncio.gather(
+            *(fetch_bounded(feed) for feed in feeds)
+        ):
+            used_worldnews = used_worldnews or feed_used_worldnews
+            used_rss = used_rss or feed_used_rss
+            if feed_warnings:
+                warnings.extend(feed_warnings)
+            fetched_items.extend(items)
 
     grouped_items: dict[int, list[dict[str, Any]]] = {}
     for item in fetched_items:
@@ -501,12 +529,14 @@ async def sync_news(db: AsyncSession) -> dict[str, Any]:
 async def run_sync_once() -> dict[str, Any]:
     await ensure_sync_schema()
     SYNC_STATUS["running"] = True
-    SYNC_STATUS["last_started_at"] = datetime.utcnow().isoformat()
+    SYNC_STATUS["last_started_at"] = datetime.now(timezone.utc).isoformat()
     SYNC_STATUS["last_error"] = None
     try:
         async with AsyncSessionLocal() as session:
             result = await sync_news(session)
         SYNC_STATUS["last_result"] = result
+        # 同步写入了新数据，清掉新闻列表/详情/相关新闻的缓存
+        await invalidate_news_cache()
         return result
     except Exception as exc:
         SYNC_STATUS["last_error"] = str(exc)
@@ -514,7 +544,7 @@ async def run_sync_once() -> dict[str, Any]:
         raise
     finally:
         SYNC_STATUS["running"] = False
-        SYNC_STATUS["last_finished_at"] = datetime.utcnow().isoformat()
+        SYNC_STATUS["last_finished_at"] = datetime.now(timezone.utc).isoformat()
 
 
 async def sync_loop(stop_event: asyncio.Event) -> None:

@@ -1,4 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useUserStore } from '../store/user'
+import pinia from '../store'
 
 const routes = [
   {
@@ -42,6 +44,26 @@ const routes = [
     }
   },
   {
+    path: '/publish',
+    name: 'PublishNews',
+    component: () => import('../views/PublishNews.vue'),
+    meta: {
+      title: '发布新闻',
+      keepAlive: false,
+      requiresAuth: true
+    }
+  },
+  {
+    path: '/my-news',
+    name: 'MyNews',
+    component: () => import('../views/MyNews.vue'),
+    meta: {
+      title: '已发布新闻',
+      keepAlive: false,
+      requiresAuth: true
+    }
+  },
+  {
     path: '/history',
     name: 'History',
     component: () => import('../views/History.vue'),
@@ -69,6 +91,24 @@ const routes = [
     }
   },
   {
+    path: '/hot',
+    name: 'HotRank',
+    component: () => import('../views/HotRank.vue'),
+    meta: {
+      title: '头条热榜',
+      keepAlive: true
+    }
+  },
+  {
+    path: '/search',
+    name: 'Search',
+    component: () => import('../views/Search.vue'),
+    meta: {
+      title: '搜索',
+      keepAlive: false
+    }
+  },
+  {
     path: '/aichat',
     name: 'AIChat',
     component: () => import('../views/AIChat.vue'),
@@ -92,7 +132,8 @@ const routes = [
     component: () => import('../views/Profile.vue'),
     meta: {
       title: '个人信息',
-      keepAlive: false
+      keepAlive: false,
+      requiresAuth: true
     }
   },
   {
@@ -115,8 +156,17 @@ const router = createRouter({
 router.beforeEach((to, from, next) => {
   // 设置页面标题
   document.title = to.meta.title || '新闻资讯'
-  
-  // 直接允许访问所有页面
+
+  // 需要登录的页面：未登录时跳转登录页，登录成功后回跳（redirect 参数）
+  if (to.meta.requiresAuth) {
+    // main.js 中 router 先于 pinia 安装，这里显式传入 pinia 实例
+    const userStore = useUserStore(pinia)
+    if (!userStore.getLoginStatus) {
+      next({ path: '/login', query: { redirect: to.fullPath } })
+      return
+    }
+  }
+
   next()
 })
 

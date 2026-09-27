@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
 import { apiConfig } from '../config/api'
+import request from '../services/request'
 
 const normalizeUserInfo = (userInfo) => {
   if (!userInfo) return userInfo
@@ -53,7 +53,7 @@ export const useUserStore = defineStore('user', {
 
     async login(userData) {
       try {
-        const response = await axios.post(`${apiConfig.baseURL}/api/user/login`, {
+        const response = await request.post('/api/user/login', {
           username: userData.username,
           password: userData.password,
         })
@@ -84,7 +84,7 @@ export const useUserStore = defineStore('user', {
 
     async register(userData) {
       try {
-        const response = await axios.post(`${apiConfig.baseURL}/api/user/register`, {
+        const response = await request.post('/api/user/register', {
           username: userData.username,
           password: userData.password,
         })
@@ -123,11 +123,7 @@ export const useUserStore = defineStore('user', {
       }
 
       try {
-        const response = await axios.get(`${apiConfig.baseURL}/api/user/info`, {
-          headers: {
-            Authorization: this.token,
-          },
-        })
+        const response = await request.get('/api/user/info')
 
         if (response.data?.code === 200) {
           this.userInfo = normalizeUserInfo(response.data.data)
@@ -167,15 +163,7 @@ export const useUserStore = defineStore('user', {
       }
 
       try {
-        const response = await axios.put(
-          `${apiConfig.baseURL}/api/user/update`,
-          { bio },
-          {
-            headers: {
-              Authorization: this.token,
-            },
-          }
-        )
+        const response = await request.put('/api/user/update', { bio })
 
         if (response.data?.code === 200) {
           this.userInfo = normalizeUserInfo(response.data.data)
@@ -215,11 +203,7 @@ export const useUserStore = defineStore('user', {
         const formData = new FormData()
         formData.append('file', file)
 
-        const response = await axios.post(`${apiConfig.baseURL}/api/user/avatar`, formData, {
-          headers: {
-            Authorization: this.token,
-          },
-        })
+        const response = await request.post('/api/user/avatar', formData)
 
         if (response.data?.code === 200) {
           this.userInfo = normalizeUserInfo(response.data.data)
@@ -257,18 +241,10 @@ export const useUserStore = defineStore('user', {
       }
 
       try {
-        const response = await axios.put(
-          `${apiConfig.baseURL}/api/user/password`,
-          {
-            oldPassword,
-            newPassword,
-          },
-          {
-            headers: {
-              Authorization: this.token,
-            },
-          }
-        )
+        const response = await request.put('/api/user/password', {
+          oldPassword,
+          newPassword,
+        })
 
         if (response.data?.code === 200) {
           return {

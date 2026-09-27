@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia'
-import axios from 'axios'
-import { apiConfig } from '../../config/api'
+import request from '../../services/request'
 
 const PAGE_SIZE = 10
 
@@ -25,7 +24,7 @@ export const useNewsStore = defineStore('news', {
       this.categoriesLoading = true
 
       try {
-        const response = await axios.get(`${apiConfig.baseURL}/api/news/categories`)
+        const response = await request.get('/api/news/categories')
 
         if (response.data && response.data.code === 200) {
           this.categories = [...response.data.data, { id: 10, name: '更多' }]
@@ -75,7 +74,7 @@ export const useNewsStore = defineStore('news', {
       const categoryId = this.currentCategory
 
       try {
-        const response = await axios.get(`${apiConfig.baseURL}/api/news/list`, {
+        const response = await request.get('/api/news/list', {
           params: {
             categoryId,
             page,
@@ -120,7 +119,7 @@ export const useNewsStore = defineStore('news', {
 
     async getNewsDetail(id) {
       try {
-        const response = await axios.get(`${apiConfig.baseURL}/api/news/detail`, {
+        const response = await request.get('/api/news/detail', {
           params: { id }
         })
 

@@ -1,6 +1,30 @@
 <template>
   <div class="ai-chat-container">
-    <van-nav-bar title="AI问答" fixed />
+    <van-nav-bar title="AI问答" fixed>
+      <template #right>
+        <van-icon name="clock-o" size="18" @click="openHistory" />
+      </template>
+    </van-nav-bar>
+
+    <van-popup v-model:show="showHistory" position="bottom" round class="history-popup">
+      <div class="history-panel">
+        <div class="history-header">
+          <strong>问答记录</strong>
+          <van-icon name="cross" @click="showHistory = false" />
+        </div>
+        <van-empty v-if="!history.length" description="暂无问答记录" />
+        <div
+          v-for="item in history"
+          :key="item.id"
+          class="history-item"
+        >
+          <div class="history-question" @click="loadHistoryItem(item)">
+            {{ item.message }}
+          </div>
+          <van-icon name="delete-o" class="history-delete" @click="removeHistory(item)" />
+        </div>
+      </div>
+    </van-popup>
     
     <div class="chat-content">
       <div class="chat-hero">
@@ -53,11 +77,17 @@
 
 <script setup>
 import { ref, onMounted, nextTick, watch } from 'vue';
+import { useRoute } from 'vue-router';
 import TabBar from '../components/TabBar.vue';
 import { showToast } from 'vant';
 import * as marked from 'marked';
 import DOMPurify from 'dompurify';
 import { apiConfig } from '../config/api';
+import { useUserStore } from '../store/user';
+import { deleteAiHistory, fetchAiHistory } from '../services/aiService';
+
+const route = useRoute();
+const userStore = useUserStore();
 
 // 聊天消息
 const messages = ref([
@@ -66,6 +96,10 @@ const messages = ref([
 const userInput = ref('');
 const messagesContainer = ref(null);
 const isLoading = ref(false);
+
+// 问答记录
+const showHistory = ref(false);
+const history = ref([]);
 
 // 格式化消息内容（支持Markdown）
 const formatMessage = (content) => {
@@ -112,11 +146,15 @@ const fetchAIResponse = async (userMessage) => {
     .map(msg => ({ role: msg.role, content: msg.content }));
   
   try {
+    // 登录用户携带 token，后端自动保存问答记录
+    const headers = { 'Content-Type': 'application/json' };
+    if (userStore.token) {
+      headers.Authorization = userStore.token;
+    }
+
     const response = await fetch(`${apiConfig.baseURL}/api/ai/chat`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
+      headers,
       body: JSON.stringify({
         messages: allMessages,
         stream: true
@@ -193,9 +231,51 @@ watch(messages, () => {
   nextTick(scrollToBottom);
 }, { deep: true });
 
+// 问答记录：打开弹层拉取列表
+const openHistory = async () => {
+  if (!userStore.getLoginStatus) {
+    showToast('登录后可同步问答记录');
+    return;
+  }
+  showHistory.value = true;
+  try {
+    const result = await fetchAiHistory({ page: 1, pageSize: 50 });
+    history.value = result.list;
+  } catch (error) {
+    showToast('问答记录获取失败');
+  }
+};
+
+// 查看某条记录：载入当前会话视图
+const loadHistoryItem = (item) => {
+  messages.value = [
+    { role: 'assistant', content: '你好！我是AI助手，有什么可以帮助你的吗？' },
+    { role: 'user', content: item.message },
+    { role: 'assistant', content: item.response }
+  ];
+  showHistory.value = false;
+  nextTick(scrollToBottom);
+};
+
+const removeHistory = async (item) => {
+  try {
+    await deleteAiHistory(item.id);
+    history.value = history.value.filter((record) => record.id !== item.id);
+  } catch (error) {
+    showToast('删除失败，请稍后再试');
+  }
+};
+
 // 组件挂载时滚动到底部
 onMounted(() => {
   scrollToBottom();
+
+  // 支持从新闻详情页带问题跳转进来（如"问AI"按钮），自动发送
+  const initialQuestion = typeof route.query.question === 'string' ? route.query.question.trim() : '';
+  if (initialQuestion) {
+    userInput.value = initialQuestion;
+    sendMessage();
+  }
 });
 </script>
 
@@ -449,5 +529,53 @@ onMounted(() => {
   color: var(--primary-color);
   font-weight: 700;
   text-decoration: none;
+}
+
+.history-popup {
+  max-height: 70vh;
+}
+
+.history-panel {
+  display: flex;
+  flex-direction: column;
+  max-height: 66vh;
+  padding: 16px;
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.history-header strong {
+  color: var(--text-color, #111827);
+  font-size: 16px;
+}
+
+.history-item {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 11px 4px;
+  border-bottom: 1px solid #f2f4f7;
+}
+
+.history-question {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-color, #111827);
+  font-size: 14px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-delete {
+  flex: 0 0 auto;
+  color: #9aa3af;
+  font-size: 16px;
 }
 </style>

@@ -1,9 +1,10 @@
 <template>
   <div class="tabbar-shell">
     <van-tabbar v-model="active" route>
-      <van-tabbar-item to="/home" icon="home-o">{{ $t('nav.home') }}</van-tabbar-item>
-      <van-tabbar-item to="/aichat" icon="chat-o">{{ $t('nav.aiChat') }}</van-tabbar-item>
-      <van-tabbar-item to="/my" icon="user-o">{{ $t('nav.my') }}</van-tabbar-item>
+      <van-tabbar-item to="/home" icon="home-o">首页</van-tabbar-item>
+      <van-tabbar-item to="/hot" icon="fire-o">热榜</van-tabbar-item>
+      <van-tabbar-item to="/aichat" icon="chat-o">AI</van-tabbar-item>
+      <van-tabbar-item to="/my" icon="user-o">我的</van-tabbar-item>
     </van-tabbar>
   </div>
 </template>
@@ -16,12 +17,14 @@ const route = useRoute()
 const active = ref(0)
 
 watchEffect(() => {
-  if (route.path.includes('/home')) {
-    active.value = 0
-  } else if (route.path.includes('/aichat')) {
+  if (route.path.includes('/hot')) {
     active.value = 1
-  } else if (route.path.includes('/my')) {
+  } else if (route.path.includes('/aichat')) {
     active.value = 2
+  } else if (route.path.includes('/my')) {
+    active.value = 3
+  } else {
+    active.value = 0
   }
 })
 </script>
@@ -35,23 +38,18 @@ watchEffect(() => {
   left: 50%;
   width: min(750px, 100vw);
   transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.88);
-  backdrop-filter: blur(22px);
-  box-shadow: 0 -10px 30px rgba(31, 59, 89, 0.08);
-  border-top: 1px solid rgba(221, 230, 241, 0.82);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 -8px 24px rgba(17, 24, 39, 0.08);
+  border-top: 1px solid #eef1f5;
 }
 
 :deep(.van-tabbar-item) {
-  color: var(--text-color-lighter);
-  transition: transform 0.18s ease;
+  color: #111827;
 }
 
 :deep(.van-tabbar-item--active) {
-  color: var(--primary-color);
-}
-
-:deep(.van-tabbar-item--active .van-tabbar-item__icon) {
-  transform: translateY(-2px);
+  color: #f04438;
+  font-weight: 900;
 }
 
 :deep(.van-tabbar-item__icon) {
@@ -60,6 +58,6 @@ watchEffect(() => {
 
 :deep(.van-tabbar-item__text) {
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 800;
 }
 </style>

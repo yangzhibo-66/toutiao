@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia';
-import axios from 'axios';
+import request from '../../services/request';
 import { useUserStore } from '../user';
-import { apiConfig } from '../../config/api';
 
 export const useFavoriteStore = defineStore('favorite', {
   state: () => ({
@@ -32,10 +31,7 @@ export const useFavoriteStore = defineStore('favorite', {
       
         try {
           this.loading = true;
-          const response = await axios.get(`${apiConfig.baseURL}/api/favorite/check`, { 
-            headers: { 
-              Authorization: userStore.token 
-            },
+          const response = await request.get('/api/favorite/check', {
             params: { newsId }
           });
           
@@ -72,15 +68,8 @@ export const useFavoriteStore = defineStore('favorite', {
       
       try {
         this.loading = true;
-        const response = await axios.post(`${apiConfig.baseURL}/api/favorite/add`, 
-          { newsId },
-          { 
-            headers: { 
-              Authorization: userStore.token 
-            } 
-          }
-        );
-        
+        const response = await request.post('/api/favorite/add', { newsId });
+
         if (response.data.code === 200) {
           return { success: true, data: response.data.data };
         } else {
@@ -105,12 +94,10 @@ export const useFavoriteStore = defineStore('favorite', {
       
       try {
         this.loading = true;
-        const response = await axios.delete(`${apiConfig.baseURL}/api/favorite/remove?newsId=${newsId}`, { 
-          headers: { 
-            Authorization: userStore.token 
-          }
+        const response = await request.delete('/api/favorite/remove', {
+          params: { newsId }
         });
-        
+
         if (response.data.code === 200) {
           return { success: true };
         } else {
@@ -192,12 +179,8 @@ export const useFavoriteStore = defineStore('favorite', {
       
       try {
         this.loading = true;
-        const response = await axios.delete(`${apiConfig.baseURL}/api/favorite/clear`, { 
-          headers: { 
-            Authorization: userStore.token 
-          }
-        });
-        
+        const response = await request.delete('/api/favorite/clear');
+
         if (response.data.code === 200) {
           // 清空本地收藏列表
           this.clearFavorites();
@@ -243,16 +226,10 @@ export const useFavoriteStore = defineStore('favorite', {
       
       try {
         this.loading = true;
-        console.log('准备发送API请求', `${apiConfig.baseURL}/api/favorite/list`);
-        const response = await axios.get(`${apiConfig.baseURL}/api/favorite/list`, { 
-          headers: { 
-            Authorization: userStore.token 
-          },
+        const response = await request.get('/api/favorite/list', {
           params: { page, pageSize }
         });
-        
-        console.log('API响应数据:', response.data);
-        
+
         if (response.data.code === 200) {
           // 更新本地收藏列表
           this.favorites = response.data.data.list;

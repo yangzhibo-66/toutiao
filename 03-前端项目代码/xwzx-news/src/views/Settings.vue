@@ -88,11 +88,10 @@
 import { ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { showToast } from 'vant';
-import axios from 'axios';
 import { useThemeStore } from '../store/theme';
 import { useI18n } from 'vue-i18n';
 import { useLanguageStore } from '../store/language';
-import { apiConfig } from '../config/api';
+import { fetchSyncStatus } from '../services/newsService';
 
 const router = useRouter();
 const themeStore = useThemeStore();
@@ -155,10 +154,7 @@ const loadSyncStatus = async () => {
   if (syncLoading.value) return;
   syncLoading.value = true;
   try {
-    const response = await axios.get(`${apiConfig.baseURL}/api/news/sync/status`);
-    if (response.data?.code === 200) {
-      syncStatus.value = response.data.data;
-    }
+    syncStatus.value = await fetchSyncStatus();
   } catch (error) {
     showToast('同步状态获取失败');
   } finally {

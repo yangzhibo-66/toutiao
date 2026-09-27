@@ -1,332 +1,140 @@
-<template>
-  <div class="home">
-    <van-nav-bar :title="$t('home.title')" fixed />
+﻿<template>
+  <div class="home-page">
+    <app-search-header v-model="keyword" @search="applySearch" @publish="showPublishTip" />
 
-    <div class="more-options">
-      <div class="more-tab" @click="goToCategory">
-        {{ $t('home.more') }} <van-icon name="arrow" />
-      </div>
+    <div class="channel-strip">
+      <button v-for="(category, index) in displayCategories" :key="category.id" type="button" :class="['channel-tab', { active: activeTab === index }]" @click="switchCategory(index)">
+        {{ displayCategoryName(category) }}
+      </button>
+      <button type="button" class="channel-more" @click="goToCategory">更多 <van-icon name="arrow-down" /></button>
     </div>
 
-    <div class="home-hero">
-      <span class="hero-kicker">TODAY</span>
-      <strong>{{ getCategoryTranslation(displayCategories[activeTab]?.name || '头条') }}</strong>
-      <span>精选要闻，快速浏览</span>
-    </div>
+    <main class="home-content">
+      <news-feed-card v-if="featuredNews" :news="featuredNews" featured @select="goToDetail" />
 
-    <div class="category-tabs">
-      <van-tabs v-model:active="activeTab" sticky swipeable animated>
-        <van-tab
-          v-for="(category, index) in displayCategories"
-          :key="category.id"
-          :title="getCategoryTranslation(category.name)"
-        >
-          <van-pull-refresh v-if="index === activeTab" v-model="newsStore.refreshing" @refresh="onRefresh">
-            <van-list
-              v-model:loading="newsStore.loading"
-              :finished="newsStore.finished"
-              :finished-text="$t('home.noMore')"
-              @load="onLoad"
-            >
-              <news-item
-                v-for="item in newsStore.newsList"
-                :key="item.id"
-                :news="item"
-              />
-            </van-list>
-          </van-pull-refresh>
-        </van-tab>
-      </van-tabs>
-    </div>
+      <section v-if="recommendItems.length" class="recommend-section">
+        <div class="section-head"><strong>为你推荐</strong><span>根据当前频道精选</span></div>
+        <div class="recommend-scroll">
+          <article v-for="item in recommendItems" :key="item.id" class="recommend-card" @click="goToDetail(item)">
+            <img :src="resolveNewsImage(item)" :alt="item.title">
+            <p>{{ item.title }}</p>
+            <span>{{ formatCount(item.views) }}阅读</span>
+          </article>
+        </div>
+      </section>
 
+      <van-pull-refresh v-model="newsStore.refreshing" @refresh="onRefresh">
+        <van-list v-model:loading="newsStore.loading" :finished="newsStore.finished" finished-text="没有更多了" @load="onLoad">
+          <news-feed-card v-for="item in visibleNews" :key="item.id" :news="item" @select="goToDetail" />
+        </van-list>
+      </van-pull-refresh>
+
+      <van-empty v-if="!newsStore.loading && !visibleNews.length" description="没有找到相关新闻" />
+    </main>
+
+    <button type="button" class="ai-fab" @click="router.push('/aichat')"><van-icon name="chat-o" />AI助手</button>
     <tab-bar />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed, onActivated, onDeactivated, onBeforeUnmount, nextTick } from 'vue'
-import { useNewsStore } from '../store/modules/news'
-import { useRouter, useRoute } from 'vue-router'
-import { useI18n } from 'vue-i18n'
-import NewsItem from '../components/NewsItem.vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import AppSearchHeader from '../components/AppSearchHeader.vue'
+import NewsFeedCard from '../components/NewsFeedCard.vue'
 import TabBar from '../components/TabBar.vue'
+import { useNewsStore } from '../store/modules/news'
+import { displayCategoryName, formatCount, matchesKeyword } from '../utils/newsFormat'
+import { resolveNewsImage } from '../utils/newsMedia'
 
 const newsStore = useNewsStore()
 const router = useRouter()
 const route = useRoute()
-const { t } = useI18n()
 const activeTab = ref(0)
-const tabsTop = ref(0)
-const moreTop = computed(() => `${tabsTop.value + 7}px`)
-let scrollListening = false
+const keyword = ref('')
+const appliedKeyword = ref('')
 
 const displayCategories = computed(() => {
-  return newsStore.categories.filter(category => category.name !== '更多')
+  const source = newsStore.categories.filter((category) => category.name !== '更多')
+  return source.length ? source : [
+    { id: 1, name: '推荐' },
+    { id: 2, name: '热榜' },
+    { id: 3, name: '关注' },
+    { id: 4, name: '北京' },
+    { id: 6, name: '体育' },
+    { id: 8, name: '科技' },
+    { id: 9, name: '财经' }
+  ]
 })
 
-const getCategoryTranslation = (categoryName) => {
-  const categoryMap = {
-    '头条': 'headline',
-    '社会': 'society',
-    '国内': 'domestic',
-    '国际': 'international',
-    '娱乐': 'entertainment',
-    '体育': 'sports',
-    '军事': 'military',
-    '科技': 'technology',
-    '财经': 'finance',
-    '更多': 'more'
-  }
+const normalizedNews = computed(() => newsStore.newsList)
+const featuredNews = computed(() => {
+  const filtered = normalizedNews.value.filter((item) => matchesKeyword(item, appliedKeyword.value))
+  return filtered[0] || normalizedNews.value[0]
+})
+const visibleNews = computed(() => normalizedNews.value.filter((item) => item.id !== featuredNews.value?.id).filter((item) => matchesKeyword(item, appliedKeyword.value)))
+const recommendItems = computed(() => normalizedNews.value.filter((item) => item.id !== featuredNews.value?.id).slice(0, 6))
 
-  const key = categoryMap[categoryName]
-  return key ? t(`home.categories.${key}`) : categoryName
+// 搜索跳转到独立搜索页：后端全库检索，而不是只过滤当前已加载的新闻
+const applySearch = () => {
+  const kw = keyword.value.trim()
+  if (!kw) return
+  router.push({ path: '/search', query: { keyword: kw } })
 }
-
-const goToCategory = () => {
-  router.push('/category')
-}
-
-const updateTabsPosition = () => {
-  const tabsElement = document.querySelector('.van-tabs__wrap')
-  if (tabsElement) {
-    tabsTop.value = tabsElement.getBoundingClientRect().top
-  }
-}
-
-const handleScroll = () => {
-  updateTabsPosition()
-}
-
-const addScrollListener = () => {
-  if (scrollListening) return
-  window.addEventListener('scroll', handleScroll)
-  scrollListening = true
-}
-
-const removeScrollListener = () => {
-  if (!scrollListening) return
-  window.removeEventListener('scroll', handleScroll)
-  scrollListening = false
-}
-
+const showPublishTip = () => { router.push('/publish') }
+const goToCategory = () => { router.push('/category') }
+const goToDetail = (item) => { router.push(`/news/detail/${item.id}`) }
 const syncActiveTabFromCategory = (categoryId) => {
-  const index = displayCategories.value.findIndex(cat => cat.id === categoryId)
-  if (index === -1) return false
-
-  if (activeTab.value !== index) {
-    activeTab.value = index
-    return true
-  }
-
-  return false
+  const index = displayCategories.value.findIndex((item) => item.id === categoryId)
+  if (index >= 0) activeTab.value = index
 }
-
-watch(
-  () => route.query.categoryId,
-  (newCategoryId) => {
-    if (!newCategoryId) return
-
-    const categoryId = Number(newCategoryId)
-    const tabChanged = syncActiveTabFromCategory(categoryId)
-    if (!tabChanged) {
-      newsStore.changeCategory(categoryId)
-    }
-  }
-)
-
-watch(activeTab, (newVal) => {
-  const category = displayCategories.value[newVal]
+const switchCategory = async (index) => {
+  const category = displayCategories.value[index]
   if (!category) return
+  activeTab.value = index
+  appliedKeyword.value = ''
+  keyword.value = ''
+  await newsStore.changeCategory(category.id)
+  await nextTick()
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+const onRefresh = () => { newsStore.getNewsList(true) }
+const onLoad = () => { newsStore.getNewsList() }
 
-  newsStore.changeCategory(category.id)
+watch(() => route.query.categoryId, (value) => {
+  if (!value) return
+  const categoryId = Number(value)
+  syncActiveTabFromCategory(categoryId)
+  newsStore.changeCategory(categoryId)
 })
 
 onMounted(async () => {
   await newsStore.getCategories()
-
   const categoryId = route.query.categoryId ? Number(route.query.categoryId) : newsStore.currentCategory
-  const tabChanged = syncActiveTabFromCategory(categoryId)
-  if (!tabChanged) {
-    await newsStore.changeCategory(categoryId)
-  }
-
-  await nextTick()
-  updateTabsPosition()
+  syncActiveTabFromCategory(categoryId)
+  await newsStore.changeCategory(categoryId)
 })
-
-onActivated(() => {
-  addScrollListener()
-  nextTick(updateTabsPosition)
-})
-
-onDeactivated(() => {
-  removeScrollListener()
-})
-
-onBeforeUnmount(() => {
-  removeScrollListener()
-})
-
-const onRefresh = () => {
-  newsStore.getNewsList(true)
-}
-
-const onLoad = () => {
-  newsStore.getNewsList()
-}
 </script>
 
 <style scoped>
-.home {
-  padding-top: 46px;
-  padding-bottom: calc(58px + var(--safe-area-inset-bottom));
-  background: var(--page-gradient);
-  min-height: 100vh;
-}
-
-.home::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 50%;
-  width: min(750px, 100vw);
-  height: 210px;
-  pointer-events: none;
-  transform: translateX(-50%);
-  background: radial-gradient(circle at 18% 18%, var(--primary-color-soft), transparent 36%),
-    radial-gradient(circle at 85% 8%, rgba(255, 184, 77, 0.16), transparent 28%);
-}
-
-.home-hero {
-  position: relative;
-  margin: 12px 16px 10px;
-  padding: 18px 18px 16px;
-  color: var(--text-color);
-  background: linear-gradient(135deg, var(--card-color), var(--secondary-color));
-  border: 1px solid color-mix(in srgb, var(--border-color) 78%, transparent);
-  border-radius: 22px;
-  box-shadow: 0 12px 32px var(--shadow-color);
-  overflow: hidden;
-}
-
-.home-hero::after {
-  content: '';
-  position: absolute;
-  right: -28px;
-  top: -34px;
-  width: 110px;
-  height: 110px;
-  border-radius: 50%;
-  background: var(--primary-color-soft);
-}
-
-.home-hero strong,
-.home-hero span {
-  position: relative;
-  z-index: 1;
-  display: block;
-}
-
-.hero-kicker {
-  margin-bottom: 4px;
-  color: var(--primary-color);
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.18em;
-}
-
-.home-hero strong {
-  font-size: 24px;
-  line-height: 1.15;
-  letter-spacing: -0.03em;
-}
-
-.home-hero span:last-child {
-  margin-top: 6px;
-  color: var(--text-color-light);
-  font-size: 13px;
-}
-
-.category-tabs {
-  position: relative;
-  margin-bottom: 10px;
-}
-
-:deep(.van-nav-bar) {
-  background: var(--nav-color);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 8px 24px var(--shadow-color);
-}
-
-:deep(.van-nav-bar__title) {
-  color: var(--text-color);
-  font-size: 18px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-:deep(.van-tabs__wrap) {
-  height: 48px;
-  padding-right: 70px;
-  background: var(--nav-color);
-  backdrop-filter: blur(16px);
-  box-shadow: 0 8px 22px var(--shadow-color);
-}
-
-:deep(.van-tabs__nav) {
-  background: transparent;
-}
-
-:deep(.van-tab) {
-  color: var(--text-color-light);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-:deep(.van-tab--active) {
-  color: var(--primary-color);
-  font-weight: 800;
-}
-
-:deep(.van-tabs__line) {
-  bottom: 8px;
-  width: 18px;
-  height: 4px;
-  border-radius: 999px;
-  background: var(--primary-color);
-}
-
-:deep(.van-list) {
-  padding: 2px 12px 8px;
-}
-
-:deep(.van-list__finished-text),
-:deep(.van-list__loading) {
-  color: var(--text-color-lighter);
-}
-
-.more-options {
-  position: fixed;
-  right: 10px;
-  z-index: 1000;
-  top: v-bind(moreTop);
-  display: flex;
-  align-items: center;
-}
-
-.more-tab {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 34px;
-  padding: 0 10px 0 12px;
-  color: var(--primary-color);
-  font-size: 13px;
-  font-weight: 800;
-  background: var(--card-color);
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
-  box-shadow: 0 8px 22px var(--shadow-color);
-  cursor: pointer;
-}
+.home-page { min-height: 100vh; padding-bottom: calc(70px + var(--safe-area-inset-bottom)); background: #fff; }
+.channel-strip { position: sticky; top: 58px; z-index: 18; display: flex; gap: 20px; align-items: center; padding: 4px 14px 8px; overflow-x: auto; background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(18px); scrollbar-width: none; }
+.channel-strip::-webkit-scrollbar { display: none; }
+.channel-tab, .channel-more { position: relative; flex: 0 0 auto; padding: 0; color: #1f2937; font-size: 15px; font-weight: 800; background: transparent; border: 0; }
+.channel-tab.active { color: #f04438; }
+.channel-tab.active::after { content: ''; position: absolute; left: 50%; bottom: -8px; width: 16px; height: 3px; border-radius: 999px; background: #f04438; transform: translateX(-50%); }
+.channel-more { display: inline-flex; gap: 3px; align-items: center; }
+.home-content { padding-top: 8px; }
+.recommend-section { padding: 14px 0 12px; border-top: 8px solid #f5f6f8; border-bottom: 8px solid #f5f6f8; }
+.section-head { display: flex; align-items: baseline; justify-content: space-between; padding: 0 14px 10px; }
+.section-head strong { color: #111827; font-size: 15px; font-weight: 900; }
+.section-head span { color: #9aa3af; font-size: 12px; }
+.recommend-scroll { display: flex; gap: 8px; padding: 0 14px; overflow-x: auto; scrollbar-width: none; }
+.recommend-scroll::-webkit-scrollbar { display: none; }
+.recommend-card { flex: 0 0 132px; }
+.recommend-card img { display: block; width: 132px; height: 74px; object-fit: cover; border-radius: 6px; background: #eef2f7; }
+.recommend-card p { margin: 7px 0 3px; color: #111827; font-size: 12px; font-weight: 700; line-height: 1.35; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; overflow: hidden; }
+.recommend-card span { color: #9aa3af; font-size: 11px; }
+.ai-fab { position: fixed; right: 16px; bottom: calc(82px + var(--safe-area-inset-bottom)); z-index: 25; display: inline-flex; gap: 5px; align-items: center; height: 38px; padding: 0 12px; color: #fff; font-size: 13px; font-weight: 900; background: #2f6bff; border: 0; border-radius: 999px; box-shadow: 0 12px 28px rgba(47, 107, 255, 0.28); }
+:deep(.van-list__finished-text), :deep(.van-list__loading) { color: #9aa3af; }
 </style>

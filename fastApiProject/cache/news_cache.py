@@ -2,12 +2,18 @@
 # key - value
 from typing import List, Dict, Any, Optional
 
-from config.cache_conf import get_json_cache, set_cache
+from config.cache_conf import delete_cache_pattern, get_json_cache, set_cache
 
 CATEGORIES_KEY = "news:categories"
 NEWS_LIST_PREFIX = "news_list:"
+NEWS_HOT_PREFIX = "news:hot:"
 NEWS_DETAIL_PREFIX = "news:detail:"
 RELATED_NEWS_PREFIX = "news:related:"
+
+
+def _list_key(category_id: Optional[int], page: int, size: int) -> str:
+    category_part = category_id if category_id is not None else "all"
+    return f"{NEWS_LIST_PREFIX}{category_part}:{page}:{size}"
 
 
 # 获取新闻分类缓存
@@ -22,19 +28,25 @@ async def set_cache_categories(data: List[Dict[str, Any]], expire: int = 7200):
     return await set_cache(CATEGORIES_KEY, data, expire)
 
 
-# 写入缓存-新闻列表 key = news_list:分类id:页码:每页数量  + 列表数据 + 过期时间
-async def set_cache_news_list(category_id: Optional[int], page: int, size: int, news_list: List[Dict[str, Any]], expire: int = 1800):
-    # 调用 封装的 Redis 的设置方法，存新闻列表到缓存
-    category_part = category_id if category_id is not None else "all"
-    key = f"{NEWS_LIST_PREFIX}{category_part}:{page}:{size}"
-    return await set_cache(key, news_list, expire)
+# 写入缓存-新闻列表：缓存完整分页载荷 {list, total, hasMore}
+async def set_cache_news_list(category_id: Optional[int], page: int, size: int, payload: Dict[str, Any], expire: int = 300):
+    return await set_cache(_list_key(category_id, page, size), payload, expire)
 
 
 # 读取缓存-新闻列表
 async def get_cache_news_list(category_id: Optional[int], page: int, size: int):
+    return await get_json_cache(_list_key(category_id, page, size))
+
+
+# 读取/写入缓存-热榜 key = news:hot:分类id|all:页码:每页数量（整包 {list, total, hasMore}）
+async def get_cache_news_hot(category_id: Optional[int], page: int, size: int):
     category_part = category_id if category_id is not None else "all"
-    key = f"{NEWS_LIST_PREFIX}{category_part}:{page}:{size}"
-    return await get_json_cache(key)
+    return await get_json_cache(f"{NEWS_HOT_PREFIX}{category_part}:{page}:{size}")
+
+
+async def set_cache_news_hot(category_id: Optional[int], page: int, size: int, payload: Dict[str, Any], expire: int = 300):
+    category_part = category_id if category_id is not None else "all"
+    return await set_cache(f"{NEWS_HOT_PREFIX}{category_part}:{page}:{size}", payload, expire)
 
 
 async def get_cached_news_detail(news_id: int) -> Optional[Dict[str, Any]]:
@@ -97,3 +109,11 @@ async def get_cached_related_news(news_id: int, category_id: int) -> Optional[Li
     """
     key = f"{RELATED_NEWS_PREFIX}{news_id}:{category_id}"
     return await get_json_cache(key)
+
+
+async def invalidate_news_cache() -> None:
+    """新闻发生新增/修改/删除/同步后，清空列表、热榜、详情、相关新闻缓存。"""
+    await delete_cache_pattern(f"{NEWS_LIST_PREFIX}*")
+    await delete_cache_pattern(f"{NEWS_HOT_PREFIX}*")
+    await delete_cache_pattern(f"{NEWS_DETAIL_PREFIX}*")
+    await delete_cache_pattern(f"{RELATED_NEWS_PREFIX}*")

@@ -1,7 +1,8 @@
+import os
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
@@ -17,9 +18,20 @@ from schemas.users import (
 )
 from utils import security
 from utils.auth import get_current_user
+from utils.rate_limit import SlidingWindowLimiter, client_ip
 from utils.response import success_response
 
 router = APIRouter(prefix="/api/user", tags=["users"])
+
+# 登录/注册限流：防暴力破解与批量注册（按 IP 计数）
+_login_limiter = SlidingWindowLimiter(
+    max_events=int(os.getenv("LOGIN_RATE_LIMIT_PER_5MIN", "20")),
+    window_seconds=300,
+)
+_register_limiter = SlidingWindowLimiter(
+    max_events=int(os.getenv("REGISTER_RATE_LIMIT_PER_5MIN", "10")),
+    window_seconds=300,
+)
 
 AVATAR_DIR = Path(__file__).resolve().parent.parent / "uploads" / "avatars"
 MAX_AVATAR_SIZE = 2 * 1024 * 1024
@@ -33,7 +45,9 @@ ALLOWED_AVATAR_TYPES = {
 
 
 @router.post("/register")
-async def register(user_data: UserRequest, db: AsyncSession = Depends(get_db)):
+async def register(request: Request, user_data: UserRequest, db: AsyncSession = Depends(get_db)):
+    _register_limiter.check(client_ip(request), detail="注册过于频繁，请稍后再试")
+
     existing_user = await users.get_user_by_username(db, user_data.username)
     if existing_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="用户已存在")
@@ -45,7 +59,9 @@ async def register(user_data: UserRequest, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login")
-async def login(user_data: UserRequest, db: AsyncSession = Depends(get_db)):
+async def login(request: Request, user_data: UserRequest, db: AsyncSession = Depends(get_db)):
+    _login_limiter.check(client_ip(request), detail="登录尝试过于频繁，请稍后再试")
+
     user = await users.get_user_by_username(db, user_data.username)
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="用户不存在，请先注册")

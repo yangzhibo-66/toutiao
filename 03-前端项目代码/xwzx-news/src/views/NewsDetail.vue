@@ -49,6 +49,18 @@
         <a :href="newsStore.newsDetail.sourceUrl" target="_blank" rel="noopener noreferrer">查看原文</a>
       </div>
 
+      <div class="ask-ai">
+        <van-button
+          block
+          round
+          icon="chat-o"
+          color="linear-gradient(135deg, #1f5eff, #4aa8ff)"
+          @click="askAi"
+        >
+          问 AI · 解读这篇新闻
+        </van-button>
+      </div>
+
       <div v-if="newsStore.newsDetail.relatedNews?.length" class="related-news">
         <h3>相关推荐</h3>
         <div class="related-list">
@@ -180,6 +192,16 @@ const onClickLeft = () => {
 
 const goToRelatedNews = (id) => {
   router.push(`/news/detail/${id}`)
+}
+
+// 跳转 AI 问答页并自动带上本文标题作为问题上下文
+const askAi = () => {
+  const title = String(newsStore.newsDetail.title || '').trim()
+  if (!title) {
+    showToast('新闻加载中，请稍后再试')
+    return
+  }
+  router.push({ path: '/aichat', query: { question: `帮我解读这篇新闻：《${title}》` } })
 }
 
 const isFavorite = computed(() => favoriteStore.isFavorite(newsId.value))
@@ -343,6 +365,18 @@ watch(newsId, (newId) => {
 
 .source-link {
   margin-bottom: 20px;
+}
+
+.ask-ai {
+  margin-bottom: 20px;
+}
+
+.ask-ai :deep(.van-button) {
+  height: 44px;
+  font-size: 15px;
+  font-weight: 800;
+  border: 0;
+  box-shadow: 0 12px 26px rgba(22, 119, 255, 0.22);
 }
 
 .source-link a {

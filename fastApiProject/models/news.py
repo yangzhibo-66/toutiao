@@ -35,6 +35,7 @@ class News(Base):
     image: Mapped[Optional[str]] = mapped_column(String(255))
     source_url: Mapped[Optional[str]] = mapped_column(String(500))
     author: Mapped[Optional[str]] = mapped_column(String(50))
+    user_id: Mapped[Optional[int]] = mapped_column(Integer)
     category_id: Mapped[int] = mapped_column(Integer, ForeignKey("news_category.id"), nullable=False)
     views: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     publish_time: Mapped[datetime] = mapped_column(DateTime, default=datetime.now)

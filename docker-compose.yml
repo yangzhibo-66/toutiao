@@ -13,7 +13,30 @@ services:
       - "8000:8000"
     env_file:
       - ./fastApiProject/.env
+    environment:
+      # 容器内通过服务名访问 Redis
+      REDIS_HOST: redis
     volumes:
       - ./fastApiProject/news_app.db:/app/news_app.db
       - ./fastApiProject/uploads:/app/uploads
+    depends_on:
+      redis:
+        condition: service_healthy
     restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: toutiao-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+volumes:
+  redis-data:

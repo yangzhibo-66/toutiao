@@ -1,3 +1,5 @@
+import { apiConfig } from '../config/api'
+
 const categoryPalette = {
   1: ['#ff8a00', '#ffd166'],
   2: ['#ff5a5f', '#ffb88c'],
@@ -46,6 +48,8 @@ const buildFallbackSvg = (title = 'NEWS', categoryId = 1) => {
 }
 
 export const resolveNewsImage = (news) => {
-  if (news?.image) return news.image
+  if (news?.image) {
+    return news.image.startsWith('/uploads/') ? `${apiConfig.baseURL}${news.image}` : news.image
+  }
   return buildFallbackSvg(news?.title, news?.categoryId)
 }
