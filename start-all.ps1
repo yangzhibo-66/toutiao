@@ -101,6 +101,35 @@ if (-not (Test-Path -LiteralPath $BackendDir)) {
     throw "Backend directory does not exist: $BackendDir"
 }
 
+function Test-PortListening {
+    param([int]$Port)
+    return $null -ne (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
+        Select-Object -First 1)
+}
+
+if (Test-PortListening -Port 8000) {
+    Write-Warning "Port 8000 is already in use - the backend may already be running; the new instance will fail to bind."
+}
+if (Test-PortListening -Port 5173) {
+    Write-Warning "Port 5173 is already in use - the frontend may already be running."
+}
+
+Write-Step "Checking backend .env"
+$EnvFile = Join-Path $BackendDir ".env"
+$EnvExample = Join-Path $BackendDir ".env.example"
+if (-not (Test-Path -LiteralPath $EnvFile)) {
+    if (Test-Path -LiteralPath $EnvExample) {
+        Copy-Item -LiteralPath $EnvExample -Destination $EnvFile
+        Write-Warning "Created fastApiProject\.env from .env.example. Fill in WORLD_NEWS_API_KEY / DASHSCOPE_API_KEY for full features; without keys the app runs in fallback mode (RSS source, no AI answers)."
+    }
+    else {
+        Write-Warning "No .env or .env.example found - the backend will run with default settings."
+    }
+}
+else {
+    Write-Host "backend .env exists; skipping .env bootstrap."
+}
+
 Require-Command "npm" "Please install Node.js first."
 
 if (-not $SkipInstall) {
