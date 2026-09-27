@@ -7,6 +7,11 @@ node_modules/
 __pycache__/
 *.py[cod]
 
+# Test artifacts
+.pytest_cache/
+fastApiProject/.pytest_cache/
+fastApiProject/.pytest-tmp/
+
 # Vite/cache output
 .vite/
 .vite-temp/
@@ -20,6 +25,8 @@ fastApiProject/.idea/dataSources/
 fastApiProject/.idea/dataSources.local.xml
 fastApiProject/.idea/httpRequests/
 
-# Environment files
+# Environment files (secrets must never be committed)
+.env
+fastApiProject/.env
 .env.local
 *.local
